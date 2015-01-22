@@ -4,7 +4,7 @@
 #       Originally Created: June 2013 by Simon Rowe <simon@wiremoons.com>
 #.............................................................................
 #
-#	Makefile for passgen.c
+#	Makefile for sugpass.c
 #
 ## CHANGE xxxx FOR YOUR NEW SOURCE FILE NAME & OUPUT FILENAME
 SRC=sugpass.c
@@ -52,27 +52,34 @@ OPT-CFLAGS_64=-Ofast -flto -funroll-loops -march=native -Wall -m64 -std=gnu11
 #	-Wall 			: enables compiler warnings
 #	-m32 			: compiles a 32bit app
 #	-m64 			: compiles a 64bit app
-#	-mwindows 		: use the Windows libraries in the code + stop console window from opening too (ie for Windows code)
+#	-mwindows 		: use the Windows libraries in the code + stop console window
+#						from opening too (ie for Windows code)
 #	-mconsole 		: states is a Windows console application
 #	-shared-libgcc 	: used by TDG-Minggw64 to used dll instead of static compile on Windows
 #	-O2 or -Os		: specify optimisation level for the compiler or use: -mtune=native
-#	-march=native  	: optimise for your computer only. To review run: gcc -march=native -E -v - </dev/null 2>&1 | sed -n 's/.* -v - //p'
-#	-mtune=native	: native optimisation level. To review run: gcc -mtune=native -E -v - </dev/null 2>&1 | sed -n 's/.* -v - //p'
-#	-mfpmath=sse   	: optimisation useful for 32bit compiles with floating point calcs are included (NB not req. in 64bit)
+#	-march=native  	: optimise for your computer only. To review run:
+#						gcc -march=native -E -v - </dev/null 2>&1 | sed -n 's/.* -v - //p'
+#	-mtune=native	: native optimisation level. To review run:
+#						gcc -mtune=native -E -v - </dev/null 2>&1 | sed -n 's/.* -v - //p'
+#	-mfpmath=sse   	: optimisation useful for 32bit compiles with floating point calcs 
+#						are included (NB not req. in 64bit)
 #	-funroll-loops 	: optimisation by enabling loop unrolling
-#	-pg  			: Support application profiling. See: http://www.thegeekstuff.com/2012/08/gprof-tutorial/
+#	-pg  			: Support application profiling. See:
+#						http://www.thegeekstuff.com/2012/08/gprof-tutorial/
 #	-std=gnu99  	: use additional GNU with standard C99 features in code
 #	-std=c99  		: use standard C99 features in code
 # 	-std=c11  		: use standard C11 features in code for iso9899:2011 from 08 Dec 2011
 # 	-std=gnu11  	: use additional GNU with standard C11 features in code for iso9899:2011
-#	-ldl 			: includes the reference to the library that has the symbols for loading dynamic libraries (such as dlopen).
+#	-ldl 			: includes the reference to the library that has the symbols for loading
+#						dynamic libraries (such as dlopen).
 #	-Wpedantic  	: issues all the warnings demanded by strict ISO C
 #  
-#  NB: '-march' is specific to current computer. '-mtune' incl. optimisations for current computer, and run on others too.
+#  NB: '-march' is specific to current computer. However '-mtune' includes optimisations 
+#		for current computer, and will run on others too. Choose to suit your own needs.
 #
 #
 ## +++ LIBRARY FLAGS: LIBFLAGS +++
-LIBFLAGS=
+LIBFLAGS=-lpdcurses
 #
 #  Below is a list of LIBFLAGS and their purpose - add above as needed:
 #
@@ -84,6 +91,7 @@ LIBFLAGS=
 #	-lcurses					: include original Curses library
 #	-lncurses					: include new NCurses
 #	-lpdcurses					: includes PDCurses (Windows) library
+#	-lreadline					: inlcudes GNU Readline library support
 #
 ## +++ SET DEFAULTS FOR WINDOWS ENVIRNOMENT +++
 RM = del
@@ -105,6 +113,8 @@ ifeq ($(uname_S),Linux)
 	CFLAGS=$(CFLAGS_$(ARCH))
 	# unset this as Linux does not need '.exe' tagged to outputs
 	EXE_END=
+	# using linux so change pdcurses to ncurses lib
+	LIBFLAGS=-lncurses
 endif
 # Use make to see if we are on MAc OS X and if 64 or 32 bits?
 ifeq ($(uname_S),Darwin)
@@ -116,6 +126,8 @@ ifeq ($(uname_S),Darwin)
 	CFLAGS=$(CFLAGS_$(ARCH))
 	# unset this as Mac OS X does not need '.exe' tagged to outputs
 	EXE_END=
+	# using macosx so change pdcurses to ncurses lib
+	LIBFLAGS=-lncurses
 endif
 #
 #
@@ -134,6 +146,7 @@ opt: $(SRC)
 clean:
 	$(RM) $(OUTNAME)$(EXE_END)
 
+# used to run valgrind memory leak checks
 val:
 	 $(shell sh -c 'valgrind --leak-check=full --show-leak-kinds=all $(OUTNAME)$(EXE_END)')
 

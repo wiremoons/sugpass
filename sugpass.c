@@ -5,9 +5,10 @@
    Created by Simon Rowe <simon@wiremoons.com>
    Initial version: 06 Jan 2014
 
-   Updated 22 Jan 2015 - added to GitHun and renamed to 'sugpass' to
+   Updated 22 Jan 2015 - added to GitHub and renamed to 'sugpass' to
    remove any confussion with 'passgen' which is on GitHib, but
-   written in Go. Also added more Doxygen integration.
+   written in Go. Also added more Doxygen integration.  Added '-q'
+   command line option as alternative to ncurses interface
 
    About
    
@@ -27,28 +28,30 @@
 */
 
 #include <stdio.h>	  // for printf() fprintf(stderr)
-#include <stdbool.h>  // for boolean support
 #include <time.h>	  // for use of time() as seed
 #include <stdlib.h>	  // for use of rand() atexit() malloc()
 #include <string.h>	  // used for strncat()
 #include <unistd.h>	  // used for getopt()
 #include <ctype.h>	  // used for isdigit()
 #include <errno.h>	  // used for strerror()	
+#include <curses.h>   // required for ncusres/curses
 
 /*-----------------------*/
 /* SET GLOBAL VARIABLES  */
 /*-----------------------*/
 
 /* define the version of the program */
-char *version="0.2";
-/* control if debuging output is provided via boolean */
-bool debug = false;
-/* control if dump/export of the words list array is provided via boolean */
-bool export = false;
+char version[]="Version: 0.2";
+/* control if debuging output is provided (0 == debug off; 1 == debug on;) */
+int debug = 0;
+/* control if dump/export of the words list array is provided (0 == export off; 1 == export on;)*/
+int export = 0;
+/* control if -q quick output is provided (0 == quick off; 1 == quick on;)*/
+int quick = 0;
 /* number of words in the word array */
 int wordArraySize = 0;
 /* define how many random words we want to include for each password */
-int wordsRequired = 3;
+int wordsRequired = 4;
 /* define how many password suggestions we want to provide */
 int numPassSuggestions = 3;
 /* 
@@ -204,21 +207,25 @@ void getCLIArgs(int argc, char **argv)
 	int c = 0;
 	int index = 0;
 
-  	while ((c = getopt (argc, argv, "vdw:s:")) != -1) 
+  	while ((c = getopt (argc, argv, "vdqw:s:")) != -1) 
   	{
 	    switch (c)
             {
             // debugging output was requested
             case 'd':
-                debug = true;
+                debug = 1;
                 break;
-            // number of words to include in each password specified
+            // quick output was requested
+            case 'q':
+                quick = 1;
+                break;				
+            // export was requested
             case 'e':
-            	export = true;
+            	export = 1;
 		        break;
 			// the version of the application requested
 			case 'v':
-				printf("%s is version: %s",argv[0],version);
+				printf("%s is: %s",argv[0],version);
 				exit(EXIT_SUCCESS);
             // number of words to include in each password specified
             case 'w':
@@ -272,7 +279,40 @@ Used via registration with 'atexit()' in main()
 
 void exitCleanup()
 {
-	printf("\nAll is well\n");
+	// output unless quick (-q) command line option was used:
+	if (!quick) printf("\nAll is well\n");
+}
+
+
+/**-------- FUNCTION: centerText
+
+   function used to print the provided text center on the screen at
+   the row number provided
+
+*/
+void centerText(int row, char *title)
+{
+	int len, indent;
+
+	len = strlen(title);
+	indent = COLS - len;
+	indent = indent / 2;
+	mvaddstr(row,indent,title);
+	refresh();
+}
+
+/**-------- FUNCTION: endPause
+
+   function to wait until user presss a key on exit of the program -
+   otherwise info on the screen will disapper
+
+*/
+void endPause()
+{
+	move(LINES-1,1);
+	printw("COMPLETE: Press any key to continue");
+	refresh();
+	getch();
 }
 
 
@@ -356,7 +396,7 @@ int main(int argc, char **argv)
 {
 	// register our atexit() function
 	atexit(exitCleanup);
-	
+
 	// get any command line arguments provided by the user
 	getCLIArgs(argc,argv);
 
@@ -371,15 +411,51 @@ int main(int argc, char **argv)
 	// done once - used as is global value for programs life
 	srand(time(NULL));
 
+	// if quick output was requested vua command line option '-q' then
+	// output a password suggestion and exist. Ignore other options
+	// except debug, and password suggestion length
+	if (quick){
+		if (debug) printf("NB: Quick password requested with '-q' option\n");
+		char *newpass = getRandom(wordsRequired);
+		printf("%s\n",newpass);
+		free(newpass); newpass= NULL;
+		return EXIT_SUCCESS;
+	}
+
+	// RUN AS NCURSES PROGRAM FROM HERE:
+	// startup a ncurse window to display output
+	initscr();
+	// display some info about the program
+	centerText(2,"Suggest Password Program");
+	centerText(3,version);
+
+	mvprintw(7,1, "- Number of three letter words available:");
+	mvprintw(7,44,"%d", wordArraySize);
+	mvprintw(8,1, "- Number of words per suggested password:");
+	mvprintw(8,44,"%d",wordsRequired);
+	mvprintw(9,1, "- Password character length will be:");
+	mvprintw(9,44, "%d", (wordsRequired * 3));
+	mvprintw(10,1, "- Number of password suggesions to offer:");
+	mvprintw(10,44, "%d", numPassSuggestions);
+	refresh();
+
+	
+	// mvprintw((LINES-2),1, "ROW: %d | COL: %d | TYPED: %d",row,col,typed);
 	// get the password suggestions
+	mvprintw(14,5, "Suggested passwords are:");
 	for (int x = 1; x <= numPassSuggestions; x++)
 	{
 		char *newpass = getRandom(wordsRequired);
-		printf("Suggested Password is: %s\n", newpass);
+		mvprintw(13+x,30,"%s", newpass);
 		// finished with *newpass now - so free memory up
 		free(newpass); newpass = NULL;
 	}
 
+
+	endPause();
+	// shutdown ncurses
+	endwin();
+	
 	return EXIT_SUCCESS;
 
 }
