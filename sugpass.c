@@ -1,10 +1,16 @@
 /**
 
-   Program: passgen
+   Program: sugpass
 
    Created by Simon Rowe <simon@wiremoons.com>
    Initial version: 06 Jan 2014
 
+   Updated 22 Jan 2015 - added to GitHun and renamed to 'sugpass' to
+   remove any confussion with 'passgen' which is on GitHib, but
+   written in Go. Also added more Doxygen integration.
+
+   About
+   
    Password creation tool using a pool of three letter english words
    to generate password suggestions.
 
@@ -12,7 +18,7 @@
    (ABSP), from the web page is here:
    http://www.absp.org.uk/words/3lw.shtml
 
-   Compile with: `gcc -Wall --std=gnu11 -o passgen passgen.c` or use
+   Compile with: `gcc -Wall --std=gnu11 -o sugpass sugpass.c` or use
    the provided 'Makefile'.
 
    The program is licensed under the "MIT License" see

@@ -7,8 +7,8 @@
 #	Makefile for passgen.c
 #
 ## CHANGE xxxx FOR YOUR NEW SOURCE FILE NAME & OUPUT FILENAME
-SRC=passgen.c
-OUTNAME=passgen
+SRC=sugpass.c
+OUTNAME=sugpass
 #
 #  NOTE:
 #  The settings below assume Microsoft Windows using MinGW Compiler as a
