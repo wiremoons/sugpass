@@ -6,9 +6,11 @@
    Initial version: 06 Jan 2014
 
    Updated 22 Jan 2015 - added to GitHub and renamed to 'sugpass' to
-   remove any confussion with 'passgen' which is on GitHib, but
+   remove any confussion with 'passgen' which is also on GitHib, but
    written in Go. Also added more Doxygen integration.  Added '-q'
    command line option as alternative to ncurses interface
+   Updated 08 Feb 2015 - added display of password with spaces as
+   makes them easier to read from the screen.
 
    About
    
@@ -19,7 +21,7 @@
    (ABSP), from the web page is here:
    http://www.absp.org.uk/words/3lw.shtml
 
-   Compile with: `gcc -Wall --std=gnu11 -o sugpass sugpass.c` or use
+   Compile with: `gcc -Wall --std=gnu11 -o sugpass sugpass.c -lncurses` or use
    the provided 'Makefile'.
 
    The program is licensed under the "MIT License" see
@@ -34,7 +36,7 @@
 #include <unistd.h>	  // used for getopt()
 #include <ctype.h>	  // used for isdigit()
 #include <errno.h>	  // used for strerror()	
-#include <curses.h>   // required for ncusres/curses
+#include <curses.h>   // required for ncusres/curses/pdcurses
 
 /*-----------------------*/
 /* SET GLOBAL VARIABLES  */
@@ -215,11 +217,11 @@ void getCLIArgs(int argc, char **argv)
             case 'd':
                 debug = 1;
                 break;
-            // quick output was requested
+            // quick non ncurses interface output was requested
             case 'q':
                 quick = 1;
                 break;				
-            // export was requested
+            // export of three letter words was requested
             case 'e':
             	export = 1;
 		        break;
@@ -304,7 +306,8 @@ void centerText(int row, char *title)
 /**-------- FUNCTION: endPause
 
    function to wait until user presss a key on exit of the program -
-   otherwise info on the screen will disapper
+   otherwise info on the screen will disapper on exit of the curses 
+   interface
 
 */
 void endPause()
@@ -313,6 +316,87 @@ void endPause()
 	printw("COMPLETE: Press any key to continue");
 	refresh();
 	getch();
+}
+
+/**-------- FUNCTION: withSpaces
+
+   function to add spaces at every third character point in the 
+   string recieved via a pointer to this function.
+   Return a pointer to a new string with the spaces added
+
+*/
+char *withSpaces(char *newpass)
+{
+	// size_t is %zu for gcc if get warnings for line below on compile
+	if (debug) { printf("DEBUG: password received by func 'withSpaces' is: %s at %d characters length\n",newpass,strlen(newpass) ); }
+
+	// get memory for a new string to contain the password plus the spaces needed.
+	// All words in the passwords are 3 characters in length - so divide password length
+	// by 3 answer will give number of spaces required plus 1 for the '\0' on the end of the new string
+	int length = ( strlen(newpass) + (strlen(newpass)/3) );
+	char *s_newpass = malloc( sizeof(char) * length );
+	// if malloc() failed - exit
+	if (s_newpass == NULL) 
+	{
+		fprintf(stderr,"Error allocating memory in withSpaces(): %s\n",strerror(errno));
+		exit(EXIT_FAILURE); 
+	}
+	if (debug) { mvprintw(24,1,"Calculated length %d for allocated string length of: %d",
+		length,(strlen(newpass)) + (strlen(newpass)/3)); }
+		
+	// initialise our new malloc variable so works with strncat
+	*s_newpass = '\0';
+
+	// count for string with spaces for pointer location
+	int s = 0;
+	// count for string with no spaces for pointer location
+	int n = 0;
+	// count to insert a space every three characters
+	int addspc = 1;
+
+	// while we can read the *newpass string passed to this function
+	while ( *(newpass+n) != '\0' )
+	{
+		// copy a char from '*newpass' string to the version to include spaces '*s_newpass'
+		*(s_newpass+s) = *(newpass+n);
+
+		//printf("Password char is: %c with spaces char: %c @ %d and space count at %d\n", *newpass, *(s_newpass+s), s, addspc);
+
+		if (debug)
+		{
+			mvprintw(25+s,1,"char '%c' copied @ string location: %d and count: %d\n", *(newpass+n), s, addspc );
+			refresh();
+		}
+
+		// if we are at the third character as we loop
+		if ( (addspc == 3) & (s != length-2 ) )
+		{
+			// increment to the next char position
+			s++;
+			// assign a space at the new char location
+			*(s_newpass+s) = ' ';
+			// set to zero as will be incremented to 1 on loop exit - thus reset
+			if (debug)
+			{
+				mvprintw(25+s,5,"added space @ string location: %d and count: %d\n", s, addspc );
+				refresh();
+			}
+			// reset char count so we can loop back to 3 chars again as needed
+			addspc = 0;
+		}
+
+		// increament to next char position 
+		s++; n++;
+		// increment char space count by 1
+		addspc++;
+
+	}
+	// done - so terminate the new string with a NUL
+	*(s_newpass+s) = '\0';
+
+	// display the complete password suggesiton created above
+	if (debug) { printf("\nNew password suggestion with spaces is: '%s'\n", s_newpass); }
+	return s_newpass;
 }
 
 
@@ -378,7 +462,7 @@ char *getRandom(int wordsRequired)
 		// if debug - print out the randowm number obtained
 		// and the corresponding word in the aray at that location
 		if (debug) { printf("Random number generated is: %d with word: '%s'\n", r, *(words+r)); }
-		// add the new word to the genPass variable
+		// add the new word to the 'genPass' variable we allocated on heap earlier
 		strncat( genPass, *(words+r), strlen(*(words+r)) );
 	}
 	// display the complete password suggesiton created above
@@ -442,13 +526,16 @@ int main(int argc, char **argv)
 	
 	// mvprintw((LINES-2),1, "ROW: %d | COL: %d | TYPED: %d",row,col,typed);
 	// get the password suggestions
-	mvprintw(14,5, "Suggested passwords are:");
+	mvprintw(12,1, "- Suggested passwords are:");
 	for (int x = 1; x <= numPassSuggestions; x++)
 	{
 		char *newpass = getRandom(wordsRequired);
+		char *spc_newpass = withSpaces(newpass);
 		mvprintw(13+x,30,"%s", newpass);
-		// finished with *newpass now - so free memory up
+		mvprintw(13+x,35+(wordsRequired * 3),"%s", spc_newpass );
+		// finished with *newpass and *spc_newpass now - so free memory up
 		free(newpass); newpass = NULL;
+		free(spc_newpass); spc_newpass = NULL;
 	}
 
 
