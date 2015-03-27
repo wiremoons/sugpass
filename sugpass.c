@@ -6,15 +6,16 @@
    Initial version: 06 Jan 2014
 
    Updated 22 Jan 2015 - added to GitHub and renamed to 'sugpass' to
-   remove any confussion with 'passgen' which is also on GitHib, but
+   remove any confusion with 'passgen' which is also on GitHib, but
    written in Go. Also added more Doxygen integration.  Added '-q'
    command line option as alternative to ncurses interface
+
    Updated 08 Feb 2015 - added display of password with spaces as
-   makes them easier to read from the screen.
+   makes them easier to read from the screen. Changed version number.
 
    About
    
-   Password creation tool using a pool of three letter english words
+   Password creation tool using a pool of three letter English words
    to generate password suggestions.
 
    Word list acquired from the Association of British Scrabble Players
@@ -43,7 +44,7 @@
 /*-----------------------*/
 
 /* define the version of the program */
-char version[]="Version: 0.2";
+char version[]="Version: 0.3";
 /* control if debuging output is provided (0 == debug off; 1 == debug on;) */
 int debug = 0;
 /* control if dump/export of the words list array is provided (0 == export off; 1 == export on;)*/
@@ -495,7 +496,7 @@ int main(int argc, char **argv)
 	// done once - used as is global value for programs life
 	srand(time(NULL));
 
-	// if quick output was requested vua command line option '-q' then
+	// if quick output was requested via command line option '-q' then
 	// output a password suggestion and exist. Ignore other options
 	// except debug, and password suggestion length
 	if (quick){
@@ -507,32 +508,35 @@ int main(int argc, char **argv)
 	}
 
 	// RUN AS NCURSES PROGRAM FROM HERE:
-	// startup a ncurse window to display output
+	// startup a ncurses window to display output
 	initscr();
 	// display some info about the program
 	centerText(2,"Suggest Password Program");
 	centerText(3,version);
 
-	mvprintw(7,1, "- Number of three letter words available:");
-	mvprintw(7,44,"%d", wordArraySize);
-	mvprintw(8,1, "- Number of words per suggested password:");
-	mvprintw(8,44,"%d",wordsRequired);
-	mvprintw(9,1, "- Password character length will be:");
-	mvprintw(9,44, "%d", (wordsRequired * 3));
-	mvprintw(10,1, "- Number of password suggesions to offer:");
-	mvprintw(10,44, "%d", numPassSuggestions);
+	mvprintw(6,1, "Application Stats:");
+	mvprintw(7,2, "- Number of three letter words available:");
+	mvprintw(7,45,"%d", wordArraySize);
+	mvprintw(8,2, "- Number of words per suggested password:");
+	mvprintw(8,45,"%d",wordsRequired);
+	mvprintw(9,2, "- Password character length will be:");
+	mvprintw(9,45, "%d", (wordsRequired * 3));
+	mvprintw(10,2, "- Number of password suggesions to offer:");
+	mvprintw(10,45, "%d", numPassSuggestions);
 	refresh();
 
 	
 	// mvprintw((LINES-2),1, "ROW: %d | COL: %d | TYPED: %d",row,col,typed);
 	// get the password suggestions
-	mvprintw(12,1, "- Suggested passwords are:");
+	mvprintw(12,4, "Suggested passwords are:");
+	mvprintw(14,12, "Password:");
+	mvprintw(14,25+(wordsRequired * 3), "Password (with spaces):");
 	for (int x = 1; x <= numPassSuggestions; x++)
 	{
 		char *newpass = getRandom(wordsRequired);
 		char *spc_newpass = withSpaces(newpass);
-		mvprintw(13+x,30,"%s", newpass);
-		mvprintw(13+x,35+(wordsRequired * 3),"%s", spc_newpass );
+		mvprintw(15+x,12,"%s", newpass);
+		mvprintw(15+x,25+(wordsRequired * 3),"%s", spc_newpass );
 		// finished with *newpass and *spc_newpass now - so free memory up
 		free(newpass); newpass = NULL;
 		free(spc_newpass); spc_newpass = NULL;
@@ -540,7 +544,7 @@ int main(int argc, char **argv)
 
 
 	endPause();
-	// shutdown ncurses
+	// shut down ncurses
 	endwin();
 	
 	return EXIT_SUCCESS;
